@@ -37,7 +37,7 @@ def create_test_scene():
         color=Vector3(1.0, 1.0, 1.0),
         diffuse=0.0,
         specular=1.0,
-        reflectivity=0.8
+        reflectivity=1.0
     )
 
     green_material = Material(
@@ -58,9 +58,9 @@ def create_test_scene():
     )
 
     sphere1 = Sphere(Vector3(0, 0, -5), 1.0, red_material)
-    sphere2 = Sphere(Vector3(2, 0, -6), 1.0, blue_material)
+    sphere2 = Sphere(Vector3(4, 0, -6), 1.0, blue_material)
     sphere3 = Sphere(Vector3(-2, 0, -4), 0.8, mirror_material)
-    sphere4 = Sphere(Vector3(0, -2, -5), 0.6, glass_material)
+    sphere4 = Sphere(Vector3(1, 1, -2), 0.6, glass_material)
     sphere5 = Sphere(Vector3(0, -2, -8), 0.8, green_material)
 
     light1 = Light(
@@ -69,19 +69,23 @@ def create_test_scene():
         intensity=1.0
     )
     light2 = Light(
-        position=Vector3(-1, 4, -2),
+        position=Vector3(-1, 4, 2),
         color=Vector3(1.0, 1.0, 1.0),
         intensity=1.0
     )
-
+    light3 = Light(
+        position=Vector3(0, -2, -4),
+        color=Vector3(1.0, 1.0, 1.0),
+        intensity=1.0
+    )
     scene.add_object(sphere1)
     scene.add_object(sphere2)
     scene.add_object(sphere3)
-    scene.add_object(sphere4)
+    #scene.add_object(sphere4)
     scene.add_object(sphere5)
     scene.add_light(light1)
     scene.add_light(light2)
-
+    scene.add_light(light3)
     return scene
 
 
