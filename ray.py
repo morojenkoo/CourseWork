@@ -1,13 +1,15 @@
 import numpy as np
-from typing import Optional
 from dataclasses import dataclass
 
+import math
 
-@dataclass
+
 class Vector3:
-    x: float
-    y: float
-    z: float
+
+    def __init__(self, x, y, z):
+        self.x = x
+        self.y = y
+        self.z = z
 
     def __add__(self, other):
         return Vector3(self.x + other.x, self.y + other.y, self.z + other.z)
@@ -22,7 +24,7 @@ class Vector3:
         return self.x * other.x + self.y * other.y + self.z * other.z
 
     def length(self):
-        return np.sqrt(self.dot(self))
+        return math.sqrt(self.x * self.x + self.y * self.y + self.z * self.z)
 
     def normalize(self):
         length = self.length()

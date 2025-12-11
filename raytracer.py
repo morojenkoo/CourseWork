@@ -1,6 +1,7 @@
 import numpy as np
 from ray import Ray, Intersection, Vector3
 from scene import Scene
+import math
 
 
 class RayTracer:
@@ -9,26 +10,17 @@ class RayTracer:
         self.max_depth = max_depth
 
     def trace_ray(self, ray: Ray, depth: int = 0) -> Vector3:
-        """
-        Рекурсивная трассировка луча
-        Returns: цвет в направлении луча
-        """
-        # Базовый случай рекурсии - достигли максимальной глубины
         if depth >= self.max_depth:
             return self.scene.background_color
 
-        # Ищем ближайшее пересечение
         intersection = self.scene.find_closest_intersection(ray)
 
-        # Если пересечения нет - возвращаем фоновый цвет
         if not intersection.happened:
             return self.scene.background_color
 
-        # Вычисляем цвет в точке пересечения
         return self.shade(intersection, ray, depth)
 
     def shade(self, intersection: Intersection, ray: Ray, depth: int) -> Vector3:
-        """Вычисление финального цвета с учетом освещения и рекурсивных эффектов"""
         material = intersection.material
 
         # Локальное освещение (ambient + diffuse)
@@ -41,46 +33,57 @@ class RayTracer:
             # Смешиваем с локальным цветом по коэффициенту отражения
             final_color = final_color + reflection_color * material.reflectivity
 
-        # Преломление (можно добавить позже)
-        # if material.transparency > 0:
-        #     refraction_color = self.compute_refraction(intersection, ray, depth)
-        #     final_color = final_color + refraction_color * material.transparency
+        if material.transparency > 0:
+            refraction_color = self.compute_refraction(intersection, ray, depth)
+            final_color = final_color + refraction_color * material.transparency
 
         # Ограничиваем цвет значениями [0, 1]
         return self.clamp_color(final_color)
 
     def compute_local_illumination(self, intersection: Intersection) -> Vector3:
-        """Вычисление локального освещения (ambient + diffuse)"""
         point = intersection.point
         normal = intersection.normal
         material = intersection.material
 
-        # Начинаем с ambient компонента
-        color = material.color * material.ambient
+        color_r = material.color.x * material.ambient
+        color_g = material.color.y * material.ambient
+        color_b = material.color.z * material.ambient
 
-        # Добавляем вклад от каждого источника света
         for light in self.scene.lights:
-            # Направление к источнику света
-            light_dir = (light.position - point).normalize()
+            # Вектор к свету (вычисляем вручную)
+            light_dir = light.position - point
 
-            # Проверяем тени - испускаем теневой луч
-            shadow_ray = Ray(point + normal * 0.001, light_dir)
+            # Длина и нормализация
+            light_length = light_dir.length()
+            light_dir = light_dir.normalize()
+
+            # Теневой луч (смещение от самопересечения)
+            shadow_origin = Vector3(point.x + normal.x * 0.001, point.y + normal.y * 0.001, point.z + normal.z * 0.001)
+
+            shadow_ray = Ray(
+                shadow_origin,
+                light_dir
+            )
+
             shadow_intersection = self.scene.find_closest_intersection(shadow_ray)
 
-            # Если нет объектов между точкой и светом (или объект дальше света)
-            light_distance = (light.position - point).length()
-            if not shadow_intersection.happened or shadow_intersection.t > light_distance:
-                # Диффузная составляющая (зависит от угла между нормалью и светом)
-                diffuse_intensity = max(0, normal.dot(light_dir))
+            # Проверяем тени
+            if not shadow_intersection.happened or shadow_intersection.t > light_length:
+                # Диффузная составляющая
+                diffuse_intensity = max(0, light_dir.dot(normal))
 
-                # Добавляем диффузный цвет
-                diffuse_color = material.color * material.diffuse * diffuse_intensity
-                color = color + diffuse_color * light.intensity
+                color_r += material.color.x * material.diffuse * diffuse_intensity * light.intensity
+                color_g += material.color.y * material.diffuse * diffuse_intensity * light.intensity
+                color_b += material.color.z * material.diffuse * diffuse_intensity * light.intensity
 
-        return color
+        # Ограничиваем цвет
+        color_r = min(1.0, color_r)
+        color_g = min(1.0, color_g)
+        color_b = min(1.0, color_b)
+
+        return Vector3(color_r, color_g, color_b)
 
     def compute_reflection(self, intersection: Intersection, ray: Ray, depth: int) -> Vector3:
-        """Вычисление отраженного цвета"""
         point = intersection.point
         normal = intersection.normal
 
@@ -96,13 +99,38 @@ class RayTracer:
         return self.trace_ray(reflection_ray, depth + 1)
 
     def compute_refraction(self, intersection: Intersection, ray: Ray, depth: int) -> Vector3:
-        """Вычисление преломленного цвета (заглушка для будущей реализации)"""
-        # TODO: реализовать закон Снеллиуса для преломления
-        # Пока возвращаем черный цвет
-        return Vector3(0, 0, 0)
+        point = intersection.point
+        normal = intersection.normal
+        material = intersection.material
+
+        # eta = in_IOR / out_IOR
+        eta = 1.0 / material.ior
+
+        cos_theta = -normal.dot(ray.direction)
+
+        if cos_theta < 0:
+            cos_theta *= -1.0
+            normal = normal * -1.0
+            eta = 1.0 / eta
+
+        k = 1.0 - eta * eta * (1.0 - cos_theta * cos_theta)
+
+        if k >= 0.0:
+            # Вычисляем направление преломленного луча
+            refraction_dir = (ray.direction * eta) + normal * (eta * cos_theta - math.sqrt(k))
+            refraction_dir = refraction_dir.normalize()
+
+            # Создаем преломленный луч
+            refraction_ray = Ray(point + normal * -0.001, refraction_dir)
+
+            # Рекурсивно трассируем преломленный луч
+            return self.trace_ray(refraction_ray, depth + 1)
+        else:
+            # Полное внутреннее отражение
+            return self.compute_reflection(intersection, ray, depth)
 
     def clamp_color(self, color: Vector3) -> Vector3:
-        """Ограничивает компоненты цвета значениями от 0 до 1"""
+
         r = max(0, min(1, color.x))
         g = max(0, min(1, color.y))
         b = max(0, min(1, color.z))

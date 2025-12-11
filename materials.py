@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from ray import Vector3
 
+
 @dataclass
 class Material:
     color: Vector3
