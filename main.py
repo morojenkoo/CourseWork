@@ -6,7 +6,7 @@ import os
 
 from ray import Vector3, Ray
 from scene import Scene
-from objects import Sphere
+from objects import Sphere, Cone, Paraboloid
 from materials import Material
 from lights import Light
 from raytracer import RayTracer
@@ -58,11 +58,27 @@ def create_test_scene():
     )
 
     sphere1 = Sphere(Vector3(0, 0, -5), 1.0, red_material)
-    sphere2 = Sphere(Vector3(4, 0, -6), 1.0, blue_material)
-    sphere3 = Sphere(Vector3(-2, 0, -4), 0.8, mirror_material)
-    sphere4 = Sphere(Vector3(1, 1, -2), 0.6, glass_material)
-    sphere5 = Sphere(Vector3(0, -2, -8), 0.8, green_material)
+    # sphere2 = Sphere(Vector3(0, 2, -5), 2.0, blue_material)
 
+    cone1 = Cone(
+        apex=Vector3(-3, -2, -5),
+        height=-3.0,
+        radius=1.4,
+        material=green_material
+    )
+    paraboloid1 = Paraboloid(
+        vertex=Vector3(3, -3, -4),
+        a=0.5,
+        height=4,
+        material=blue_material
+    )
+
+    paraboloid2 = Paraboloid(
+        vertex=Vector3(-2, 2, -6),
+        a=-0.2,
+        height=6,
+        material=mirror_material
+    )
     light1 = Light(
         position=Vector3(2, 5, -3),
         color=Vector3(1.0, 1.0, 1.0),
@@ -74,18 +90,20 @@ def create_test_scene():
         intensity=1.0
     )
     light3 = Light(
-        position=Vector3(0, -2, -4),
+        position=Vector3(-3, 2, -5),
         color=Vector3(1.0, 1.0, 1.0),
         intensity=1.0
     )
+
     scene.add_object(sphere1)
-    scene.add_object(sphere2)
-    scene.add_object(sphere3)
-    #scene.add_object(sphere4)
-    scene.add_object(sphere5)
+    # scene.add_object(sphere2)
+    scene.add_object(cone1)
+    scene.add_object(paraboloid1)
+    scene.add_object(paraboloid2)
     scene.add_light(light1)
     scene.add_light(light2)
     scene.add_light(light3)
+
     return scene
 
 
